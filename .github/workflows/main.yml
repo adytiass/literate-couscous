@@ -42,7 +42,7 @@ jobs:
       # Configure Rclone
       - name: Configure Rclone
         run: |
-          wget '${{ secrets.RCLONE_CONFIG }}'
+          echo '${{ secrets.RCLONE_CONFIG }}' > rclone.conf
 
       # Generate RSS Feed
       - name: Generate RSS Feed
