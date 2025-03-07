@@ -34,5 +34,26 @@ jobs:
       - name: Run EGS-T.py
         run: python FG/EGS-T.py
 
-      - name: Run EGS-E.py
-        run: python FG/EGS-E.py
+      # Install Rclone
+      - name: Install Rclone
+        run: |
+         sudo -v ; curl https://rclone.org/install.sh | sudo bash -s beta 
+
+      # Configure Rclone
+      - name: Configure Rclone
+        run: |
+          wget '${{ secrets.RCLONE_CONFIG }}'
+
+      # Generate RSS Feed
+      - name: Generate RSS Feed
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }} # MongoDB URI dari Secrets
+        run: |
+          python script/FREEGAMES/EGS-E.py # Pastikan `script.py` adalah nama file Python Anda
+
+      # Unggah file XML ke remote menggunakan rclone
+      - name: Upload to Remote
+        env:
+          RCLONE_CONFIG: ${{ secrets.RCLONE_CONFIG }} > rclone.conf # Rclone Config dari Secrets
+        run: |
+          rclone copy EGS-E.xml ab:Arc.BiHU.0x/0x/0x/XML --quiet --config rclone.conf
