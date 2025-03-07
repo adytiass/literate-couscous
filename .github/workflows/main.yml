@@ -1,0 +1,38 @@
+name: Run FG Scripts
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"  # Menjalankan setiap 30 menit
+  workflow_dispatch:  # Menjalankan secara manual jika diperlukan
+
+jobs:
+  run-scripts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r FG/requirements.txt
+
+      - name: Set Environment Variables
+        run: |
+          echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" >> $GITHUB_ENV
+          echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> $GITHUB_ENV
+          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" >> $GITHUB_ENV
+
+      - name: Run AZ-T.py
+        run: python FG/AZ-T.py
+
+      - name: Run EGS-T.py
+        run: python FG/EGS-T.py
+
+      - name: Run EGS-E.py
+        run: python FG/EGS-E.py
