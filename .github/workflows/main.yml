@@ -49,7 +49,7 @@ jobs:
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }} # MongoDB URI dari Secrets
         run: |
-          python script/FREEGAMES/EGS-E.py # Pastikan `script.py` adalah nama file Python Anda
+          python FG/EGS-E.py # Pastikan `script.py` adalah nama file Python Anda
 
       # Unggah file XML ke remote menggunakan rclone
       - name: Upload to Remote
