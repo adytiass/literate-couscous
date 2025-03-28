@@ -2,7 +2,7 @@ name: Run FG Scripts
 
 on:
   schedule:
-    - cron: "0 17 * * *"  # Menjalankan setiap 30 menit
+    - cron: "0 15-20 * * *"  # Menjalankan setiap 30 menit
   workflow_dispatch:  # Menjalankan secara manual jika diperlukan
 
 jobs:
