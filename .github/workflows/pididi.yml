@@ -1,0 +1,51 @@
+name: PudiDi
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 17 * * *'  # Jalankan setiap 5 menit
+
+jobs:
+  view-links:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Puppeteer
+        run: |
+          npm install puppeteer axios
+
+      - name: Read and View Links (Base64 Decoded)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: -1002487244694
+        run: node index.js
+
+      - name: Fetch files from PixelDrain and Encode to Base64
+        run: |
+          # Fetch file list from PixelDrain API
+          response=$(curl -s -X GET -u :${{ secrets.PD }} https://pixeldrain.com/api/user/files)
+          
+          # Extract file IDs, generate links, and encode in Base64
+          echo "$response" | jq -r '.files[] | "https://pixeldrain.com/u/\(.id)"' | while read url; do
+            echo -n "$url" | base64 >> links-wh.txt
+            echo "" >> links-wh.txt
+          done
+
+      - name: Commit links-wh.txt (if changed)
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          if [[ `git status --porcelain` ]]; then
+            git add links-wh.txt
+            git commit -m "Update links-wh.txt"
+            git push
+          else
+            echo "No changes to commit"
+          fi
