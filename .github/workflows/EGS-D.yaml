@@ -1,0 +1,28 @@
+name: Broadcast Game Update
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 10 * * *'  # Setiap jam 10 pagi UTC
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install beautifulsoup4 requests
+
+      - name: Run EGS Script
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: -1002471139847 
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python FG/EGS-D.py
