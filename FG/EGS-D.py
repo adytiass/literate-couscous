@@ -9,9 +9,9 @@ os.environ['TELEGRAM_CHAT_ID'] = os.getenv('TELEGRAM_CHAT_ID')
 os.environ['GEMINI_API_KEY'] = os.getenv('GEMINI_API_KEY')
 
 # === Gemini Model URL ===
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=" + os.environ['GEMINI_API_KEY']
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + os.environ['GEMINI_API_KEY']
 
-# === GEMINI FUNCTIONS ===
+# === AI FUNCTIONS ===
 
 def get_age_rating(title, genre):
     headers = {"Content-Type": "application/json"}
@@ -58,6 +58,37 @@ Answer only the price in EUR (e.g. 59.99). If unknown or not found, respond with
     print(f"[Gemini-Price] ERROR: {res.text}")
     return "Unknown"
 
+def cari_genre_dari_ai(title):
+    headers = {"Content-Type": "application/json"}
+    prompt = f"""
+What is the genre of the game titled "{title}"? 
+Answer with only the main genre or 2-3 related genres, comma separated. 
+No extra explanation, just like: Action, RPG, Strategy
+"""
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    res = requests.post(GEMINI_URL, headers=headers, data=json.dumps(payload))
+    if res.status_code == 200:
+        jawaban = res.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+        print(f"[Gemini-Genre] {title} → {jawaban}")
+        return jawaban
+    print(f"[Gemini-Genre] ERROR: {res.text}")
+    return "Unknown"
+
+def cari_deskripsi_dari_ai(title):
+    headers = {"Content-Type": "application/json"}
+    prompt = f"""
+Give me a short 2-3 sentence description of the game "{title}" suitable for a Telegram post. 
+Make it catchy, brief, and avoid spoilers. Focus on gameplay or genre.
+"""
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    res = requests.post(GEMINI_URL, headers=headers, data=json.dumps(payload))
+    if res.status_code == 200:
+        jawaban = res.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+        print(f"[Gemini-Desc] {title} → {jawaban[:80]}...")
+        return jawaban
+    print(f"[Gemini-Desc] ERROR: {res.text}")
+    return "No description available"
+
 # === UTIL ===
 
 def is_valid_price(text):
@@ -69,14 +100,13 @@ def ambil_li_berdasarkan_label(li_elements, label):
             return li.text.split(": ", 1)[1]
     return "Not Available"
 
-# === LOAD RSS FEED ===
+# === PARSE XML ===
 rss_url = 'https://feed.phenx.de/lootscraper_epic_game.xml'
 response = requests.get(rss_url)
 soup = BeautifulSoup(response.content, 'xml')
 entries = soup.find_all('entry')
 
-# === PROSES 1 ENTRY (DEMO) ===
-for entry in entries[:1]:
+for entry in entries[:1]:  # demo satu entri
     title = entry.title.text.replace("Epic Games (Game) - ", "").strip()
     link = entry.link['href']
     content = entry.content
@@ -85,19 +115,35 @@ for entry in entries[:1]:
 
     offer_valid_from = ambil_li_berdasarkan_label(li_items, "Offer valid from")
     offer_valid_to = ambil_li_berdasarkan_label(li_items, "Offer valid to")
-    release_date = ambil_li_berdasarkan_label(li_items, "Release Date")
-    recommended_price = ambil_li_berdasarkan_label(li_items, "Original Price").replace("EUR", "").strip()
+    release_date = ambil_li_berdasarkan_label(li_items, "Release date")
+    recommended_price = ambil_li_berdasarkan_label(li_items, "Recommended price").replace("EUR", "").strip()
     game_description = ambil_li_berdasarkan_label(li_items, "Description")
-    genre = ambil_li_berdasarkan_label(li_items, "Genre")
 
-    if len(game_description) > 500:
-        game_description = game_description[:500] + "..."
+    # === Ambil genre dari <category> jika ada
+    categories = entry.find_all('category')
+    genre_list = [cat['label'] for cat in categories if cat['term'].startswith('Genre:')]
+    genre = ', '.join(genre_list).strip()
 
+    if not genre:
+        genre = ambil_li_berdasarkan_label(li_items, "Genres")
+
+    # === Validasi dan fallback ===
     if not is_valid_price(recommended_price):
         print(f"[!] Harga tidak valid: {recommended_price}. Mencoba pakai AI...")
         recommended_price = cari_harga_dari_ai(title)
 
-    # === AI Analysis ===
+    if not genre or genre == "Not Available" or len(genre) < 3:
+        print(f"[!] Genre tidak ditemukan. Mencoba pakai AI...")
+        genre = cari_genre_dari_ai(title)
+
+    if not game_description or game_description == "Not Available" or len(game_description.strip()) < 20:
+        print(f"[!] Deskripsi kosong. Pakai AI...")
+        game_description = cari_deskripsi_dari_ai(title)
+
+    if len(game_description) > 500:
+        game_description = game_description[:500] + "..."
+
+    # === Analisis AI ===
     rating = get_age_rating(title, genre)
     history = check_discount_history(title)
 
