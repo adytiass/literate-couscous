@@ -3,12 +3,12 @@ from bs4 import BeautifulSoup
 import os
 import json
 
-# Konfigurasi ENV manual jika tidak pakai .env
-os.environ['TELEGRAM_BOT_TOKEN'] = 'ISI_TOKEN_BOTMU'
-os.environ['TELEGRAM_CHAT_ID'] = 'ISI_CHAT_ID_MU'
-os.environ['GEMINI_API_KEY'] = 'ISI_API_KEY_GEMINI_MU'
+# === ENV SETUP ===
+os.environ['TELEGRAM_BOT_TOKEN'] = os.getenv('TELEGRAM_BOT_TOKEN')
+os.environ['TELEGRAM_CHAT_ID'] = os.getenv('TELEGRAM_CHAT_ID')
+os.environ['GEMINI_API_KEY'] = os.getenv('GEMINI_API_KEY')
 
-# ====== Fungsi AI ======
+# === GEMINI FUNCTIONS ===
 def get_age_rating(title, genre):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={os.environ['GEMINI_API_KEY']}"
     headers = {"Content-Type": "application/json"}
@@ -19,7 +19,10 @@ Answer with one of: "Everyone", "Teen", "Mature", "18+", or "Unknown" only.
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
     res = requests.post(url, headers=headers, data=json.dumps(payload))
     if res.status_code == 200:
-        return res.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+        jawaban = res.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+        print(f"[Gemini-Rating] {title} → {jawaban}")
+        return jawaban if jawaban in ["Everyone", "Teen", "Mature", "18+"] else "Unknown"
+    print(f"[Gemini-Rating] ERROR: {res.text}")
     return "Unknown"
 
 def check_discount_history(title):
@@ -32,7 +35,10 @@ If so, mention the date. If you don't know, answer "Unknown" and just make it Wi
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
     res = requests.post(url, headers=headers, data=json.dumps(payload))
     if res.status_code == 200:
-        return res.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+        jawaban = res.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+        print(f"[Gemini-History] {title} → {jawaban}")
+        return jawaban
+    print(f"[Gemini-History] ERROR: {res.text}")
     return "Unknown"
 
 def is_valid_price(text):
@@ -44,13 +50,13 @@ def ambil_li_berdasarkan_label(li_elements, label):
             return li.text.split(": ", 1)[1]
     return "Not Available"
 
-# ====== Load & Parse Feed ======
+# === LOAD RSS FEED ===
 rss_url = 'https://feed.phenx.de/lootscraper_epic_game.xml'
 response = requests.get(rss_url)
 soup = BeautifulSoup(response.content, 'xml')
 entries = soup.find_all('entry')
 
-# ====== Proses 1 Entry Saja (Demo) ======
+# === PROSES 1 ENTRY (DEMO) ===
 for entry in entries[:1]:
     title = entry.title.text.replace("Epic Games (Game) - ", "").strip()
     link = entry.link['href']
@@ -72,11 +78,11 @@ for entry in entries[:1]:
         print(f"[!] Harga tidak valid: {recommended_price}")
         recommended_price = "Unknown"
 
-    # === AI Validation ===
+    # === PANGGIL GEMINI ===
     rating = get_age_rating(title, genre)
     history = check_discount_history(title)
 
-    # === Format Pesan ===
+    # === FORMAT PESAN TELEGRAM ===
     message = (
         f"🎮 <b>{title}</b>\n\n"
         f"💬 <code>Description:</code>\n<blockquote>{game_description}</blockquote>\n\n"
@@ -89,7 +95,7 @@ for entry in entries[:1]:
         f"📅 Offer valid from: <b>{offer_valid_from}</b> to <b>{offer_valid_to}</b>"
     )
 
-    # === Kirim ke Telegram ===
+    # === KIRIM KE TELEGRAM ===
     telegram_url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendPhoto"
     payload = {
         "chat_id": os.environ['TELEGRAM_CHAT_ID'],
@@ -107,5 +113,5 @@ for entry in entries[:1]:
     if tg_response.status_code == 200:
         print(f"[+] Berhasil kirim: {title}")
     else:
-        print(f"[!] Gagal kirim: {tg_response.status_code}")
-        print(tg_response.text)
+        print(f"[Telegram] ❌ Status: {tg_response.status_code}")
+        print(f"[Telegram] Response: {tg_response.text}")
