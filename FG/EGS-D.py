@@ -9,7 +9,7 @@ os.environ['TELEGRAM_CHAT_ID'] = os.getenv('TELEGRAM_CHAT_ID')
 os.environ['GEMINI_API_KEY'] = os.getenv('GEMINI_API_KEY')
 
 # === Gemini Model URL ===
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-preview-04-17:generateContent?key=" + os.environ['GEMINI_API_KEY']
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=" + os.environ['GEMINI_API_KEY']
 
 # === GEMINI FUNCTIONS ===
 
