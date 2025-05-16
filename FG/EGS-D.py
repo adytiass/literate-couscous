@@ -10,7 +10,7 @@ os.environ['GEMINI_API_KEY'] = os.getenv('GEMINI_API_KEY')
 
 # === GEMINI FUNCTIONS ===
 def get_age_rating(title, genre):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={os.environ['GEMINI_API_KEY']}"
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={os.environ['GEMINI_API_KEY']}"
     headers = {"Content-Type": "application/json"}
     prompt = f"""
 Game "{title}" is a {genre} game. Based on the content, what is the most appropriate age rating (ESRB or PEGI)?
@@ -26,7 +26,7 @@ Answer with one of: "Everyone", "Teen", "Mature", "18+", or "Unknown" only.
     return "Unknown"
 
 def check_discount_history(title):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={os.environ['GEMINI_API_KEY']}"
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={os.environ['GEMINI_API_KEY']}"
     headers = {"Content-Type": "application/json"}
     prompt = f'''
 Has the game titled "{title}" ever been given away for free before by Epic Games? 
