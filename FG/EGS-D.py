@@ -8,16 +8,19 @@ os.environ['TELEGRAM_BOT_TOKEN'] = os.getenv('TELEGRAM_BOT_TOKEN')
 os.environ['TELEGRAM_CHAT_ID'] = os.getenv('TELEGRAM_CHAT_ID')
 os.environ['GEMINI_API_KEY'] = os.getenv('GEMINI_API_KEY')
 
+# === Gemini Model URL ===
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + os.environ['GEMINI_API_KEY']
+
 # === GEMINI FUNCTIONS ===
+
 def get_age_rating(title, genre):
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={os.environ['GEMINI_API_KEY']}"
     headers = {"Content-Type": "application/json"}
     prompt = f"""
 Game "{title}" is a {genre} game. Based on the content, what is the most appropriate age rating (ESRB or PEGI)?
 Answer with one of: "Everyone", "Teen", "Mature", "18+", or "Unknown" only.
 """
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    res = requests.post(url, headers=headers, data=json.dumps(payload))
+    res = requests.post(GEMINI_URL, headers=headers, data=json.dumps(payload))
     if res.status_code == 200:
         jawaban = res.json()['candidates'][0]['content']['parts'][0]['text'].strip()
         print(f"[Gemini-Rating] {title} → {jawaban}")
@@ -26,20 +29,36 @@ Answer with one of: "Everyone", "Teen", "Mature", "18+", or "Unknown" only.
     return "Unknown"
 
 def check_discount_history(title):
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={os.environ['GEMINI_API_KEY']}"
     headers = {"Content-Type": "application/json"}
     prompt = f'''
 Has the game titled "{title}" ever been given away for free before by Epic Games? 
 If so, mention the date. If you don't know, answer "Unknown" and just make it Without a long yapping or mucho texto if there is one list all of that.
 '''
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    res = requests.post(url, headers=headers, data=json.dumps(payload))
+    res = requests.post(GEMINI_URL, headers=headers, data=json.dumps(payload))
     if res.status_code == 200:
         jawaban = res.json()['candidates'][0]['content']['parts'][0]['text'].strip()
         print(f"[Gemini-History] {title} → {jawaban}")
         return jawaban
     print(f"[Gemini-History] ERROR: {res.text}")
     return "Unknown"
+
+def cari_harga_dari_ai(title):
+    headers = {"Content-Type": "application/json"}
+    prompt = f"""
+What is the current price of the game titled "{title}" on Steam store? 
+Answer only the price in EUR (e.g. 59.99). If unknown or not found, respond with "Unknown".
+"""
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    res = requests.post(GEMINI_URL, headers=headers, data=json.dumps(payload))
+    if res.status_code == 200:
+        output = res.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+        print(f"[Gemini-Price] {title} → {output}")
+        return output if output.replace('.', '', 1).isdigit() else "Unknown"
+    print(f"[Gemini-Price] ERROR: {res.text}")
+    return "Unknown"
+
+# === UTIL ===
 
 def is_valid_price(text):
     return text.replace('.', '', 1).isdigit()
@@ -75,14 +94,14 @@ for entry in entries[:1]:
         game_description = game_description[:500] + "..."
 
     if not is_valid_price(recommended_price):
-        print(f"[!] Harga tidak valid: {recommended_price}")
-        recommended_price = "Unknown"
+        print(f"[!] Harga tidak valid: {recommended_price}. Mencoba pakai AI...")
+        recommended_price = cari_harga_dari_ai(title)
 
-    # === PANGGIL GEMINI ===
+    # === AI Analysis ===
     rating = get_age_rating(title, genre)
     history = check_discount_history(title)
 
-    # === FORMAT PESAN TELEGRAM ===
+    # === Format Pesan Telegram ===
     message = (
         f"🎮 <b>{title}</b>\n\n"
         f"💬 <code>Description:</code>\n<blockquote>{game_description}</blockquote>\n\n"
@@ -95,7 +114,7 @@ for entry in entries[:1]:
         f"📅 Offer valid from: <b>{offer_valid_from}</b> to <b>{offer_valid_to}</b>"
     )
 
-    # === KIRIM KE TELEGRAM ===
+    # === Kirim ke Telegram ===
     telegram_url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendPhoto"
     payload = {
         "chat_id": os.environ['TELEGRAM_CHAT_ID'],
