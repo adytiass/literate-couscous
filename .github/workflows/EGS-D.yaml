@@ -22,7 +22,7 @@ jobs:
 
       - name: Run EGS Script
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN_DEMO }}
           TELEGRAM_CHAT_ID: -1002471139847 
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python FG/EGS-D.py
